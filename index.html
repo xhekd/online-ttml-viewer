@@ -1,0 +1,1507 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Online TTML Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #080a0f;
+      color: #e8ebf3;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    h1,
+    p {
+      margin: 0;
+    }
+
+    #importScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    #importCard {
+      width: min(640px, 100%);
+      border: 1px solid #2a2f3a;
+      border-radius: 14px;
+      background: #0f141f;
+      padding: 18px;
+    }
+
+    #importCard h1 {
+      margin-bottom: 8px;
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    #importCard p {
+      margin-bottom: 12px;
+      color: #b8c1d6;
+      line-height: 1.45;
+    }
+
+    #importForm {
+      display: grid;
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.95rem;
+      color: #d8deec;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      border: 1px dashed #3a465f;
+      border-radius: 8px;
+      background: #0a1120;
+      color: #d9e2f2;
+      padding: 8px;
+      font: inherit;
+    }
+
+    button,
+    select,
+    input[type="range"] {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid #32425f;
+      border-radius: 8px;
+      background: #182239;
+      color: #e8ebf3;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #202d49;
+    }
+
+    select {
+      border: 1px solid #32425f;
+      border-radius: 8px;
+      background: #131d32;
+      color: #e8ebf3;
+      padding: 5px 8px;
+    }
+
+    #appScreen {
+      min-height: 100vh;
+      padding: 24px 20px 220px;
+    }
+
+    #lyricsWindow {
+      width: min(980px, 100%);
+      min-height: 58vh;
+      max-height: calc(100vh - 280px);
+      margin: 0 auto;
+      border: 1px solid #2a2f3a;
+      border-radius: 14px;
+      background: #0c111b;
+      padding: 14px 16px 18px;
+      overflow: auto;
+    }
+
+    #viewerRows {
+      white-space: pre-wrap;
+      line-height: 1.45;
+    }
+
+    .line-row {
+      padding: 4px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .line-row:hover {
+      background: #151b2b;
+    }
+
+    .line-row.active {
+      background: #1b253b;
+    }
+
+    .line-row.loop-target {
+      outline: 1px solid #2f4368;
+    }
+
+    .line-row[data-tone="done"] {
+      color: #97dd9d;
+    }
+
+    .line-row[data-tone="active"] {
+      color: #ffffff;
+    }
+
+    .line-row[data-tone="upcoming"] {
+      color: #626c85;
+    }
+
+    .line-row[data-tone="hidden"] {
+      color: #2f3547;
+    }
+
+    #controlDock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 10px 14px 14px;
+      border-top: 1px solid #1f2430;
+      background: linear-gradient(180deg, rgba(8, 10, 15, 0.2), rgba(8, 10, 15, 0.92) 26%, rgba(8, 10, 15, 1));
+    }
+
+    #controlPanel {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      border: 1px solid #2b3240;
+      border-radius: 12px;
+      background: #0e1420;
+      padding: 10px 12px;
+    }
+
+    #timeline {
+      width: 100%;
+      margin: 0 0 10px;
+      accent-color: #b6c8ff;
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 10px;
+      margin-bottom: 8px;
+    }
+
+    .control-row:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .label-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #d6ddef;
+    }
+
+    #typingSpeed {
+      width: 140px;
+      accent-color: #b6c8ff;
+    }
+
+    #volumeSlider {
+      width: 130px;
+      accent-color: #b6c8ff;
+    }
+
+    #timeLabel {
+      margin-left: auto;
+      color: #bfc9dd;
+    }
+
+    #audioStatus {
+      color: #9da8bf;
+    }
+
+    #statusLine,
+    #importStatus {
+      min-height: 18px;
+      margin-top: 8px;
+      font-size: 0.92rem;
+    }
+
+    #rawWindowBar {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 2px;
+    }
+
+    #openRawWindowBtn {
+      border: none;
+      background: transparent;
+      color: #6f7d9d;
+      padding: 2px 3px;
+      font-size: 0.72rem;
+      opacity: 0.72;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    #openRawWindowBtn:hover {
+      background: transparent;
+      color: #9eb1dc;
+      opacity: 1;
+    }
+
+    .status.ok {
+      color: #9ce2a1;
+    }
+
+    .status.error {
+      color: #ff9ca8;
+    }
+
+    .hint {
+      display: block;
+      margin-top: 8px;
+      color: #8f9ab1;
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 760px) {
+      #appScreen {
+        padding: 14px 10px 240px;
+      }
+
+      #lyricsWindow {
+        min-height: 52vh;
+        max-height: calc(100vh - 290px);
+      }
+
+      #timeLabel {
+        width: 100%;
+        margin-left: 0;
+      }
+
+      #typingSpeed {
+        width: 120px;
+      }
+
+      #volumeSlider {
+        width: 110px;
+      }
+
+      #openRawWindowBtn {
+        font-size: 0.69rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="importScreen">
+    <section id="importCard">
+      <h1>Online TTML Viewer</h1>
+      <p>Import one required <strong>.ttml</strong> file and one optional audio file (<strong>.mp3</strong>, <strong>.ogg</strong>, <strong>.flac</strong>, or <strong>.wav</strong>).</p>
+
+      <form id="importForm">
+        <div class="field">
+          <label for="ttmlFile">TTML file (required)</label>
+          <input id="ttmlFile" name="ttmlFile" type="file" accept=".ttml,.xml,text/xml,application/ttml+xml" required>
+        </div>
+
+        <div class="field">
+          <label for="audioFile">Audio file (optional)</label>
+          <input id="audioFile" name="audioFile" type="file" accept=".mp3,.ogg,.flac,.wav">
+        </div>
+
+        <div>
+          <button type="submit">Import files</button>
+        </div>
+      </form>
+
+      <p id="importStatus" class="status"></p>
+      <small class="hint">After importing, this screen clears into a dedicated lyric window.</small>
+    </section>
+  </main>
+
+  <main id="appScreen" hidden>
+    <section id="lyricsWindow" aria-label="Lyrics viewer" aria-live="polite">
+      <div id="viewerRows"></div>
+    </section>
+  </main>
+
+  <div id="controlDock" hidden>
+    <div id="controlPanel">
+      <input id="timeline" type="range" min="0" max="1000" value="0" step="1" aria-label="Playback timeline">
+
+      <div class="control-row">
+        <button type="button" id="playBtn">Play</button>
+        <button type="button" id="pauseBtn">Pause</button>
+        <button type="button" id="stopBtn">Stop</button>
+        <span id="timeLabel">00:00.000 / 00:00.000</span>
+      </div>
+
+      <div class="control-row">
+        <span>mode</span>
+        <label class="label-inline">
+          <input type="radio" name="displayMode" value="typing" checked>
+          typing
+        </label>
+        <label class="label-inline">
+          <input type="radio" name="displayMode" value="block">
+          block
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label class="label-inline" for="grayUpcoming">gray upcoming</label>
+        <select id="grayUpcoming" name="grayUpcoming">
+          <option value="yes" selected>y</option>
+          <option value="no">n</option>
+        </select>
+
+        <label class="label-inline">
+          <input type="checkbox" id="loopEnabled" name="loopEnabled">
+          loop line
+        </label>
+        <select id="loopLine" name="loopLine"></select>
+        <button type="button" id="loopCurrent">Use current line</button>
+      </div>
+
+      <div class="control-row">
+        <label class="label-inline" for="typingSpeed">typing speed</label>
+        <input id="typingSpeed" type="range" min="0.50" max="3.00" step="0.05" value="1.00" aria-label="Typing speed">
+        <span id="speedLabel">1.00x</span>
+        <label class="label-inline" for="volumeSlider">volume</label>
+        <input id="volumeSlider" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+        <span id="volumeLabel">100%</span>
+        <span id="audioStatus">No audio loaded. Playback uses TTML timing.</span>
+        <button type="button" id="changeFilesBtn">Import new files</button>
+      </div>
+
+      <p id="statusLine" class="status"></p>
+      <div id="rawWindowBar">
+        <button type="button" id="openRawWindowBtn" title="Open a plain raw lyric window">Open a raw window</button>
+      </div>
+    </div>
+  </div>
+
+  <audio id="audioPlayer" hidden preload="auto"></audio>
+
+  <script>
+    (function () {
+      var importScreen = document.getElementById("importScreen");
+      var appScreen = document.getElementById("appScreen");
+      var controlDock = document.getElementById("controlDock");
+      var importForm = document.getElementById("importForm");
+      var ttmlFileInput = document.getElementById("ttmlFile");
+      var audioFileInput = document.getElementById("audioFile");
+      var importStatus = document.getElementById("importStatus");
+      var statusLine = document.getElementById("statusLine");
+      var viewerRows = document.getElementById("viewerRows");
+
+      var grayUpcoming = document.getElementById("grayUpcoming");
+      var loopEnabled = document.getElementById("loopEnabled");
+      var loopLine = document.getElementById("loopLine");
+      var loopCurrent = document.getElementById("loopCurrent");
+      var playBtn = document.getElementById("playBtn");
+      var pauseBtn = document.getElementById("pauseBtn");
+      var stopBtn = document.getElementById("stopBtn");
+      var changeFilesBtn = document.getElementById("changeFilesBtn");
+      var openRawWindowBtn = document.getElementById("openRawWindowBtn");
+
+      var timeline = document.getElementById("timeline");
+      var typingSpeed = document.getElementById("typingSpeed");
+      var speedLabel = document.getElementById("speedLabel");
+      var volumeSlider = document.getElementById("volumeSlider");
+      var volumeLabel = document.getElementById("volumeLabel");
+      var timeLabel = document.getElementById("timeLabel");
+      var audioStatus = document.getElementById("audioStatus");
+      var audioPlayer = document.getElementById("audioPlayer");
+      var modeInputs = document.querySelectorAll("input[name='displayMode']");
+
+      var state = {
+        cues: [],
+        lineEls: [],
+        activeIndex: -1,
+        hasAudio: false,
+        isPlaying: false,
+        virtualTime: 0,
+        lastFrameTime: 0,
+        frameId: 0,
+        audioUrl: "",
+        isScrubbing: false,
+        rawWindow: null,
+        lastRenderedLines: [],
+        lastRenderTime: 0
+      };
+
+      function setStatus(message, isError) {
+        var showViewerStatus = !appScreen.hidden;
+        var target = showViewerStatus ? statusLine : importStatus;
+        var other = showViewerStatus ? importStatus : statusLine;
+
+        target.textContent = message;
+        target.className = "status " + (isError ? "error" : "ok");
+
+        other.textContent = "";
+        other.className = "status";
+      }
+
+      function normalizeText(text) {
+        return (text || "").replace(/\s+/g, " ").trim();
+      }
+
+      function parseTime(raw) {
+        if (!raw) {
+          return NaN;
+        }
+
+        var text = String(raw).trim().replace(",", ".");
+        if (!text) {
+          return NaN;
+        }
+
+        var parts;
+
+        if (/^\d+:\d{2}:\d{2}(\.\d+)?$/.test(text)) {
+          parts = text.split(":");
+          return (parseInt(parts[0], 10) * 3600) + (parseInt(parts[1], 10) * 60) + parseFloat(parts[2]);
+        }
+
+        if (/^\d{1,2}:\d{2}(\.\d+)?$/.test(text)) {
+          parts = text.split(":");
+          return (parseInt(parts[0], 10) * 60) + parseFloat(parts[1]);
+        }
+
+        if (/^\d+(\.\d+)?h$/.test(text)) {
+          return parseFloat(text) * 3600;
+        }
+
+        if (/^\d+(\.\d+)?m$/.test(text)) {
+          return parseFloat(text) * 60;
+        }
+
+        if (/^\d+(\.\d+)?s$/.test(text)) {
+          return parseFloat(text);
+        }
+
+        if (/^\d+(\.\d+)?ms$/.test(text)) {
+          return parseFloat(text) / 1000;
+        }
+
+        if (/^\d+(\.\d+)?f$/.test(text)) {
+          return parseFloat(text) / 30;
+        }
+
+        if (/^\d+(\.\d+)?t$/.test(text)) {
+          return parseFloat(text);
+        }
+
+        if (/^\d+(\.\d+)?$/.test(text)) {
+          return parseFloat(text);
+        }
+
+        return NaN;
+      }
+
+      function resolveTime(raw, parentBegin, relativeOffsets) {
+        if (!raw) {
+          return NaN;
+        }
+
+        var text = String(raw).trim();
+        var seconds = parseTime(text);
+        if (!Number.isFinite(seconds)) {
+          return NaN;
+        }
+
+        if (text.indexOf(":") !== -1) {
+          return seconds;
+        }
+
+        if (relativeOffsets) {
+          return parentBegin + seconds;
+        }
+
+        return seconds;
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function getMode() {
+        var selected = "typing";
+        modeInputs.forEach(function (input) {
+          if (input.checked) {
+            selected = input.value;
+          }
+        });
+        return selected;
+      }
+
+      function getTypingSpeed() {
+        var value = parseFloat(typingSpeed.value);
+        if (!Number.isFinite(value)) {
+          return 1;
+        }
+        return clamp(value, 0.5, 3);
+      }
+
+      function updateSpeedLabel() {
+        speedLabel.textContent = getTypingSpeed().toFixed(2) + "x";
+      }
+
+      function getVolumeValue() {
+        var value = parseFloat(volumeSlider.value);
+        if (!Number.isFinite(value)) {
+          return 1;
+        }
+        return clamp(value, 0, 1);
+      }
+
+      function applyVolume() {
+        var volume = getVolumeValue();
+        audioPlayer.volume = volume;
+        audioPlayer.muted = volume === 0;
+        volumeLabel.textContent = String(Math.round(volume * 100)) + "%";
+        syncRawWindow();
+      }
+
+      function getRawPayload() {
+        return {
+          time: state.lastRenderTime,
+          duration: getDuration(),
+          volume: getVolumeValue(),
+          lines: state.lastRenderedLines.slice()
+        };
+      }
+
+      function buildRawWindowHtml() {
+        return [
+          "<!doctype html>",
+          "<html lang=\"en\">",
+          "<head>",
+          "  <meta charset=\"utf-8\">",
+          "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+          "  <title>Raw TTML Window</title>",
+          "  <style>",
+          "    body { margin: 0; background: #ffffff; color: #111111; font-family: monospace; }",
+          "    #rawTop { position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #f7f7f7; border-bottom: 1px solid #d7d7d7; }",
+          "    #rawPlayback { flex: 1; min-width: 120px; }",
+          "    #rawVolume { width: 96px; }",
+          "    #rawLyrics { margin: 0; padding: 8px; white-space: pre-wrap; line-height: 1.35; }",
+          "  </style>",
+          "</head>",
+          "<body>",
+          "  <div id=\"rawTop\">",
+          "    <input id=\"rawPlayback\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\" step=\"1\" aria-label=\"Playback\">",
+          "    <input id=\"rawVolume\" type=\"range\" min=\"0\" max=\"1\" step=\"0.01\" value=\"1\" aria-label=\"Volume\">",
+          "  </div>",
+          "  <pre id=\"rawLyrics\"></pre>",
+          "  <script>",
+          "    (function () {",
+          "      var playback = document.getElementById(\"rawPlayback\");",
+          "      var volume = document.getElementById(\"rawVolume\");",
+          "      var lyrics = document.getElementById(\"rawLyrics\");",
+          "      var syncing = false;",
+          "",
+          "      function api() {",
+          "        if (!window.opener) {",
+          "          return null;",
+          "        }",
+          "        return window.opener.__ttmlViewerApi || null;",
+          "      }",
+          "",
+          "      window.__rawUpdate = function (payload) {",
+          "        syncing = true;",
+          "        var duration = Math.max(payload.duration || 0, 0.001);",
+          "        var current = Math.max(0, payload.time || 0);",
+          "        playback.max = String(Math.max(1, Math.round(duration * 1000)));",
+          "        playback.value = String(Math.round(current * 1000));",
+          "        volume.value = String(typeof payload.volume === \"number\" ? payload.volume : 1);",
+          "        lyrics.textContent = (payload.lines || []).join(\"\\n\");",
+          "        syncing = false;",
+          "      };",
+          "",
+          "      playback.addEventListener(\"input\", function () {",
+          "        if (syncing) {",
+          "          return;",
+          "        }",
+          "        var hostApi = api();",
+          "        if (!hostApi) {",
+          "          return;",
+          "        }",
+          "        hostApi.seek(parseInt(playback.value, 10) / 1000);",
+          "      });",
+          "",
+          "      volume.addEventListener(\"input\", function () {",
+          "        if (syncing) {",
+          "          return;",
+          "        }",
+          "        var hostApi = api();",
+          "        if (!hostApi) {",
+          "          return;",
+          "        }",
+          "        hostApi.setVolume(parseFloat(volume.value));",
+          "      });",
+          "",
+          "      window.addEventListener(\"beforeunload\", function () {",
+          "        var hostApi = api();",
+          "        if (hostApi && hostApi.onRawWindowClosed) {",
+          "          hostApi.onRawWindowClosed();",
+          "        }",
+          "      });",
+          "",
+          "      var hostApi = api();",
+          "      if (hostApi && hostApi.getSnapshot) {",
+          "        window.__rawUpdate(hostApi.getSnapshot());",
+          "      }",
+          "    }());",
+          "  <\/script>",
+          "</body>",
+          "</html>"
+        ].join("\n");
+      }
+
+      function syncRawWindow() {
+        if (!state.rawWindow || state.rawWindow.closed) {
+          state.rawWindow = null;
+          return;
+        }
+
+        if (typeof state.rawWindow.__rawUpdate === "function") {
+          state.rawWindow.__rawUpdate(getRawPayload());
+        }
+      }
+
+      function openRawWindow() {
+        if (state.rawWindow && !state.rawWindow.closed) {
+          state.rawWindow.focus();
+          syncRawWindow();
+          return;
+        }
+
+        var popup = window.open("", "ttml_raw_window", "width=900,height=700,resizable=yes,scrollbars=yes");
+        if (!popup) {
+          setStatus("Pop-up blocked. Allow pop-ups to open the raw window.", true);
+          return;
+        }
+
+        state.rawWindow = popup;
+        popup.document.open();
+        popup.document.write(buildRawWindowHtml());
+        popup.document.close();
+
+        setStatus("Raw window opened.", false);
+        setTimeout(function () {
+          syncRawWindow();
+        }, 40);
+      }
+
+      function formatTime(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) {
+          return "00:00.000";
+        }
+
+        var hours = Math.floor(seconds / 3600);
+        var minutes = Math.floor((seconds % 3600) / 60);
+        var secs = seconds % 60;
+        var secText = secs.toFixed(3).padStart(6, "0");
+
+        if (hours > 0) {
+          return String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0") + ":" + secText;
+        }
+
+        return String(minutes).padStart(2, "0") + ":" + secText;
+      }
+
+      function applyCueSpacingToBlocks(blocks, cueText) {
+        if (!blocks.length || !cueText) {
+          return;
+        }
+
+        var cursor = 0;
+
+        for (var i = 0; i < blocks.length; i += 1) {
+          var token = normalizeText(blocks[i].text);
+          if (!token) {
+            blocks[i].text = "";
+            continue;
+          }
+
+          blocks[i].text = token;
+
+          var foundAt = cueText.indexOf(token, cursor);
+          if (foundAt === -1) {
+            continue;
+          }
+
+          if (foundAt > cursor) {
+            var inBetween = cueText.slice(cursor, foundAt);
+            if (i === 0) {
+              blocks[i].text = inBetween + blocks[i].text;
+            } else {
+              blocks[i - 1].text += inBetween;
+            }
+          }
+
+          cursor = foundAt + token.length;
+        }
+
+        if (cursor < cueText.length) {
+          blocks[blocks.length - 1].text += cueText.slice(cursor);
+        }
+      }
+
+      function buildBlocks(pNode, cueBegin, cueEnd, cueText) {
+        var spans = Array.from(pNode.getElementsByTagName("*")).filter(function (node) {
+          return node.localName === "span" && (node.hasAttribute("begin") || node.hasAttribute("end") || node.hasAttribute("dur"));
+        });
+
+        var blocks = [];
+
+        spans.forEach(function (span) {
+          var normalized = normalizeText(span.textContent);
+          if (!normalized) {
+            return;
+          }
+
+          var start = span.hasAttribute("begin") ? resolveTime(span.getAttribute("begin"), cueBegin, true) : cueBegin;
+          var end = span.hasAttribute("end") ? resolveTime(span.getAttribute("end"), cueBegin, true) : NaN;
+
+          if (!Number.isFinite(end) && span.hasAttribute("dur")) {
+            var dur = parseTime(span.getAttribute("dur"));
+            if (Number.isFinite(dur)) {
+              end = start + dur;
+            }
+          }
+
+          if (!Number.isFinite(start)) {
+            start = cueBegin;
+          }
+
+          if (!Number.isFinite(end)) {
+            end = cueEnd;
+          }
+
+          start = clamp(start, cueBegin, cueEnd);
+          end = clamp(end, cueBegin, cueEnd);
+
+          if (end <= start) {
+            end = Math.min(cueEnd, start + 0.01);
+          }
+
+          blocks.push({
+            start: start,
+            end: end,
+            text: normalized
+          });
+        });
+
+        var hasTimedSplits = blocks.length > 0;
+
+        if (blocks.length === 0) {
+          var tokens = cueText.match(/\S+\s*/g) || [cueText];
+          var spanLength = Math.max(cueEnd - cueBegin, 0.01);
+          var step = spanLength / Math.max(tokens.length, 1);
+
+          tokens.forEach(function (token, index) {
+            var start = cueBegin + (index * step);
+            var end = index === tokens.length - 1 ? cueEnd : cueBegin + ((index + 1) * step);
+
+            blocks.push({
+              start: start,
+              end: end,
+              text: token
+            });
+          });
+        }
+
+        blocks.sort(function (a, b) {
+          return a.start - b.start;
+        });
+
+        if (blocks.length > 0) {
+          for (var i = 1; i < blocks.length; i += 1) {
+            if (blocks[i].start < blocks[i - 1].start) {
+              blocks[i].start = blocks[i - 1].start;
+            }
+
+            if (blocks[i].end <= blocks[i].start) {
+              blocks[i].end = Math.min(cueEnd, blocks[i].start + 0.01);
+            }
+          }
+
+          if (blocks[blocks.length - 1].end < cueEnd) {
+            blocks[blocks.length - 1].end = cueEnd;
+          }
+        }
+
+        if (hasTimedSplits) {
+          applyCueSpacingToBlocks(blocks, cueText);
+        }
+
+        return {
+          blocks: blocks,
+          hasTimedSplits: hasTimedSplits
+        };
+      }
+
+      function parseTtml(ttmlText) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(ttmlText, "application/xml");
+        var parserError = doc.getElementsByTagName("parsererror")[0];
+
+        if (parserError) {
+          throw new Error("TTML could not be parsed. Please check file format.");
+        }
+
+        var nodes = Array.from(doc.getElementsByTagName("*")).filter(function (node) {
+          return node.localName === "p";
+        });
+
+        if (nodes.length === 0) {
+          throw new Error("No subtitle lines found (missing <p> tags).");
+        }
+
+        var cues = [];
+        var lastEnd = 0;
+
+        nodes.forEach(function (pNode) {
+          var begin = pNode.hasAttribute("begin") ? resolveTime(pNode.getAttribute("begin"), 0, false) : lastEnd;
+          var end = pNode.hasAttribute("end") ? resolveTime(pNode.getAttribute("end"), 0, false) : NaN;
+
+          if (!Number.isFinite(end) && pNode.hasAttribute("dur")) {
+            var dur = parseTime(pNode.getAttribute("dur"));
+            if (Number.isFinite(dur)) {
+              end = begin + dur;
+            }
+          }
+
+          if (!Number.isFinite(begin)) {
+            begin = lastEnd;
+          }
+
+          if (!Number.isFinite(end)) {
+            end = begin + 2;
+          }
+
+          if (end <= begin) {
+            end = begin + 0.5;
+          }
+
+          var text = normalizeText(pNode.textContent);
+          if (!text) {
+            return;
+          }
+
+          var blockData = buildBlocks(pNode, begin, end, text);
+
+          cues.push({
+            begin: begin,
+            end: end,
+            text: text,
+            blocks: blockData.blocks,
+            hasTimedSplits: blockData.hasTimedSplits
+          });
+
+          lastEnd = Math.max(lastEnd, end);
+        });
+
+        cues.sort(function (a, b) {
+          return a.begin - b.begin;
+        });
+
+        cues.forEach(function (cue, index) {
+          cue.index = index;
+        });
+
+        return cues;
+      }
+
+      function speedAdjustedProgress(baseProgress, speed) {
+        if (!Number.isFinite(speed) || speed <= 0) {
+          return baseProgress;
+        }
+
+        var exponent = 1 / speed;
+        return clamp(Math.pow(baseProgress, exponent), 0, 1);
+      }
+
+      function renderTypingText(cue, time) {
+        if (time <= cue.begin) {
+          return "";
+        }
+
+        if (time >= cue.end) {
+          return cue.text;
+        }
+
+        if (!cue.hasTimedSplits) {
+          var lineDuration = Math.max(cue.end - cue.begin, 0.001);
+          var baseProgress = clamp((time - cue.begin) / lineDuration, 0, 1);
+          var adjusted = speedAdjustedProgress(baseProgress, getTypingSpeed());
+          var count = Math.floor(adjusted * cue.text.length);
+          return cue.text.slice(0, count);
+        }
+
+        var output = "";
+
+        for (var i = 0; i < cue.blocks.length; i += 1) {
+          var block = cue.blocks[i];
+
+          if (time >= block.end) {
+            output += block.text;
+            continue;
+          }
+
+          if (time <= block.start) {
+            break;
+          }
+
+          var length = Math.max(block.end - block.start, 0.001);
+          var progress = clamp((time - block.start) / length, 0, 1);
+          var charCount = Math.floor(progress * block.text.length);
+          output += block.text.slice(0, charCount);
+          break;
+        }
+
+        return output;
+      }
+
+      function renderBlockText(cue, time) {
+        if (time <= cue.begin) {
+          return "";
+        }
+
+        if (time >= cue.end) {
+          return cue.text;
+        }
+
+        var output = "";
+
+        for (var i = 0; i < cue.blocks.length; i += 1) {
+          if (time >= cue.blocks[i].start) {
+            output += cue.blocks[i].text;
+          } else {
+            break;
+          }
+        }
+
+        return output;
+      }
+
+      function getMaxCueEnd() {
+        if (state.cues.length === 0) {
+          return 0;
+        }
+        return state.cues[state.cues.length - 1].end;
+      }
+
+      function getDuration() {
+        var cueEnd = getMaxCueEnd();
+
+        if (state.hasAudio && Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0) {
+          return Math.max(cueEnd, audioPlayer.duration);
+        }
+
+        return cueEnd;
+      }
+
+      function getCurrentTime() {
+        return state.hasAudio ? (audioPlayer.currentTime || 0) : state.virtualTime;
+      }
+
+      function updateTimelineAndClock(time) {
+        var duration = Math.max(getDuration(), 0);
+        var safeDuration = Math.max(duration, 0.001);
+        var clampedTime = clamp(time, 0, safeDuration);
+
+        timeline.max = String(Math.max(1, Math.round(safeDuration * 1000)));
+        if (!state.isScrubbing) {
+          timeline.value = String(Math.round(clampedTime * 1000));
+        }
+
+        timeLabel.textContent = formatTime(clampedTime) + " / " + formatTime(safeDuration);
+      }
+
+      function seekTo(seconds) {
+        var duration = Math.max(getDuration(), 0);
+        var target = clamp(seconds || 0, 0, Math.max(duration, seconds || 0));
+
+        if (state.hasAudio) {
+          audioPlayer.currentTime = target;
+        } else {
+          state.virtualTime = target;
+        }
+
+        renderAtTime(target);
+      }
+
+      function stopTicker() {
+        if (state.frameId) {
+          cancelAnimationFrame(state.frameId);
+          state.frameId = 0;
+        }
+      }
+
+      function startTicker() {
+        if (state.frameId) {
+          return;
+        }
+
+        state.lastFrameTime = performance.now();
+        state.frameId = requestAnimationFrame(onFrame);
+      }
+
+      function getLoopCue() {
+        if (!loopEnabled.checked) {
+          return null;
+        }
+
+        var index = parseInt(loopLine.value, 10);
+        if (!Number.isFinite(index) || index < 0 || index >= state.cues.length) {
+          return null;
+        }
+
+        return state.cues[index];
+      }
+
+      function onFrame(now) {
+        if (!state.isPlaying) {
+          state.frameId = 0;
+          return;
+        }
+
+        if (!state.hasAudio) {
+          var delta = Math.max(0, (now - state.lastFrameTime) / 1000);
+          state.virtualTime += delta;
+        }
+
+        state.lastFrameTime = now;
+
+        var current = getCurrentTime();
+        var loopCue = getLoopCue();
+
+        if (loopCue && current >= loopCue.end) {
+          seekTo(loopCue.begin);
+          current = getCurrentTime();
+
+          if (state.hasAudio && audioPlayer.paused) {
+            audioPlayer.play().catch(function () {
+              setStatus("Audio could not resume after loop jump.", true);
+            });
+          }
+        }
+
+        if (!state.hasAudio && !loopCue) {
+          var maxEnd = getMaxCueEnd();
+          if (current >= maxEnd) {
+            state.virtualTime = maxEnd;
+            state.isPlaying = false;
+            renderAtTime(maxEnd);
+            state.frameId = 0;
+            return;
+          }
+        }
+
+        renderAtTime(current);
+        state.frameId = requestAnimationFrame(onFrame);
+      }
+
+      function drawRow(row, prefixText, lineText, tone, isActive, isLoopTarget) {
+        row.textContent = prefixText + lineText;
+        row.setAttribute("data-tone", tone);
+        row.classList.toggle("active", isActive);
+        row.classList.toggle("loop-target", isLoopTarget);
+      }
+
+      function renderAtTime(time) {
+        updateTimelineAndClock(time);
+
+        var mode = getMode();
+        var showGrayUpcoming = grayUpcoming.value === "yes";
+        var activeIndex = -1;
+
+        for (var i = 0; i < state.cues.length; i += 1) {
+          var cue = state.cues[i];
+          if (time >= cue.begin && time < cue.end) {
+            activeIndex = i;
+            break;
+          }
+        }
+
+        if (activeIndex !== state.activeIndex) {
+          state.activeIndex = activeIndex;
+          if (activeIndex >= 0 && state.lineEls[activeIndex]) {
+            state.lineEls[activeIndex].scrollIntoView({ block: "center" });
+          }
+        }
+
+        var loopIndex = parseInt(loopLine.value, 10);
+        var loopIsOn = loopEnabled.checked;
+        var rawLines = [];
+
+        state.cues.forEach(function (cue, index) {
+          var row = state.lineEls[index];
+          if (!row) {
+            return;
+          }
+
+          var text = "";
+          var tone = "hidden";
+
+          if (time >= cue.end) {
+            text = cue.text;
+            tone = "done";
+          } else if (time >= cue.begin) {
+            text = mode === "typing" ? renderTypingText(cue, time) : renderBlockText(cue, time);
+            tone = "active";
+          } else if (showGrayUpcoming) {
+            text = cue.text;
+            tone = "upcoming";
+          }
+
+          var activeMarker = index === activeIndex ? ">" : " ";
+          var loopMarker = loopIsOn && index === loopIndex ? "*" : " ";
+          var prefix = activeMarker + loopMarker + String(index + 1).padStart(3, "0") + " | ";
+
+          drawRow(row, prefix, text, tone, index === activeIndex, loopIsOn && index === loopIndex);
+          rawLines.push(prefix + text);
+        });
+
+        state.lastRenderedLines = rawLines;
+        state.lastRenderTime = time;
+        syncRawWindow();
+      }
+
+      function refreshViewerRows() {
+        viewerRows.innerHTML = "";
+        state.lineEls = [];
+
+        state.cues.forEach(function (cue, index) {
+          var row = document.createElement("div");
+          row.className = "line-row";
+          row.setAttribute("data-index", String(index));
+          row.title = "Jump playback to this line";
+
+          row.addEventListener("click", function () {
+            seekTo(cue.begin);
+            setStatus("Jumped to line " + String(index + 1) + ".", false);
+          });
+
+          viewerRows.appendChild(row);
+          state.lineEls.push(row);
+        });
+      }
+
+      function refreshLoopSelect() {
+        loopLine.innerHTML = "";
+
+        state.cues.forEach(function (cue, index) {
+          var option = document.createElement("option");
+          option.value = String(index);
+
+          var preview = cue.text;
+          if (preview.length > 42) {
+            preview = preview.slice(0, 42) + "...";
+          }
+
+          option.textContent = String(index + 1) + ": " + preview;
+          loopLine.appendChild(option);
+        });
+
+        if (state.cues.length > 0) {
+          loopLine.value = "0";
+        }
+      }
+
+      function pausePlayback() {
+        state.isPlaying = false;
+        stopTicker();
+
+        if (state.hasAudio && !audioPlayer.paused) {
+          audioPlayer.pause();
+        }
+
+        renderAtTime(getCurrentTime());
+      }
+
+      function playPlayback() {
+        if (state.cues.length === 0) {
+          setStatus("Import a TTML file first.", true);
+          return;
+        }
+
+        if (state.hasAudio) {
+          audioPlayer.play().catch(function () {
+            setStatus("Audio could not start. Check the selected audio file.", true);
+          });
+          return;
+        }
+
+        state.isPlaying = true;
+        startTicker();
+      }
+
+      function stopPlayback() {
+        state.isPlaying = false;
+        stopTicker();
+
+        if (state.hasAudio) {
+          audioPlayer.pause();
+          audioPlayer.currentTime = 0;
+        }
+
+        state.virtualTime = 0;
+        renderAtTime(0);
+      }
+
+      function clearAudioSource() {
+        if (state.audioUrl) {
+          URL.revokeObjectURL(state.audioUrl);
+          state.audioUrl = "";
+        }
+
+        audioPlayer.removeAttribute("src");
+        audioPlayer.load();
+      }
+
+      function loadAudioFromInput() {
+        var file = audioFileInput.files[0] || null;
+
+        clearAudioSource();
+
+        if (!file) {
+          state.hasAudio = false;
+          audioStatus.textContent = "No audio loaded. Playback uses TTML timing.";
+          applyVolume();
+          return;
+        }
+
+        state.audioUrl = URL.createObjectURL(file);
+        audioPlayer.src = state.audioUrl;
+        audioPlayer.load();
+        state.hasAudio = true;
+        audioStatus.textContent = "Audio loaded: " + file.name;
+        applyVolume();
+      }
+
+      function showViewerScreen() {
+        importScreen.hidden = true;
+        appScreen.hidden = false;
+        controlDock.hidden = false;
+      }
+
+      function showImportScreen() {
+        importScreen.hidden = false;
+        appScreen.hidden = true;
+        controlDock.hidden = true;
+      }
+
+      function resetToImportScreen() {
+        pausePlayback();
+
+        state.cues = [];
+        state.lineEls = [];
+        state.activeIndex = -1;
+        state.virtualTime = 0;
+        state.isScrubbing = false;
+        state.lastRenderedLines = [];
+        state.lastRenderTime = 0;
+
+        viewerRows.innerHTML = "";
+        loopLine.innerHTML = "";
+        loopEnabled.checked = false;
+        importForm.reset();
+
+        clearAudioSource();
+        state.hasAudio = false;
+        audioStatus.textContent = "No audio loaded. Playback uses TTML timing.";
+        syncRawWindow();
+
+        showImportScreen();
+        setStatus("Ready. Import your TTML file to begin.", false);
+      }
+
+      window.__ttmlViewerApi = {
+        getSnapshot: function () {
+          return getRawPayload();
+        },
+        seek: function (seconds) {
+          seekTo(seconds);
+        },
+        setVolume: function (volume) {
+          volumeSlider.value = String(clamp(volume, 0, 1));
+          applyVolume();
+        },
+        onRawWindowClosed: function () {
+          if (state.rawWindow && state.rawWindow.closed) {
+            state.rawWindow = null;
+          }
+        }
+      };
+
+      importForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        var ttmlFile = ttmlFileInput.files[0];
+        if (!ttmlFile) {
+          setStatus("TTML is required.", true);
+          return;
+        }
+
+        pausePlayback();
+        state.virtualTime = 0;
+        state.activeIndex = -1;
+
+        ttmlFile.text().then(function (ttmlText) {
+          var cues = parseTtml(ttmlText);
+          if (cues.length === 0) {
+            throw new Error("No displayable lines found in TTML.");
+          }
+
+          state.cues = cues;
+          refreshLoopSelect();
+          refreshViewerRows();
+          loadAudioFromInput();
+
+          updateSpeedLabel();
+          showViewerScreen();
+          renderAtTime(0);
+
+          setStatus("Imported " + String(cues.length) + " line(s).", false);
+        }).catch(function (error) {
+          state.cues = [];
+          refreshLoopSelect();
+          refreshViewerRows();
+          showImportScreen();
+          setStatus(error.message || "Could not import files.", true);
+        });
+      });
+
+      changeFilesBtn.addEventListener("click", function () {
+        resetToImportScreen();
+      });
+
+      openRawWindowBtn.addEventListener("click", function () {
+        openRawWindow();
+      });
+
+      loopCurrent.addEventListener("click", function () {
+        if (state.activeIndex < 0) {
+          setStatus("No active line right now. Press Play or move time first.", true);
+          return;
+        }
+
+        loopLine.value = String(state.activeIndex);
+        renderAtTime(getCurrentTime());
+        setStatus("Loop target moved to current line " + String(state.activeIndex + 1) + ".", false);
+      });
+
+      loopLine.addEventListener("change", function () {
+        renderAtTime(getCurrentTime());
+      });
+
+      loopEnabled.addEventListener("change", function () {
+        renderAtTime(getCurrentTime());
+      });
+
+      grayUpcoming.addEventListener("change", function () {
+        renderAtTime(getCurrentTime());
+      });
+
+      modeInputs.forEach(function (input) {
+        input.addEventListener("change", function () {
+          renderAtTime(getCurrentTime());
+        });
+      });
+
+      typingSpeed.addEventListener("input", function () {
+        updateSpeedLabel();
+        renderAtTime(getCurrentTime());
+      });
+
+      volumeSlider.addEventListener("input", function () {
+        applyVolume();
+      });
+
+      playBtn.addEventListener("click", function () {
+        playPlayback();
+      });
+
+      pauseBtn.addEventListener("click", function () {
+        pausePlayback();
+      });
+
+      stopBtn.addEventListener("click", function () {
+        stopPlayback();
+      });
+
+      timeline.addEventListener("pointerdown", function () {
+        state.isScrubbing = true;
+      });
+
+      timeline.addEventListener("pointerup", function () {
+        state.isScrubbing = false;
+      });
+
+      timeline.addEventListener("blur", function () {
+        state.isScrubbing = false;
+      });
+
+      timeline.addEventListener("input", function () {
+        state.isScrubbing = true;
+        var seconds = parseInt(timeline.value, 10) / 1000;
+        seekTo(seconds);
+      });
+
+      timeline.addEventListener("change", function () {
+        state.isScrubbing = false;
+        var seconds = parseInt(timeline.value, 10) / 1000;
+        seekTo(seconds);
+      });
+
+      audioPlayer.addEventListener("loadedmetadata", function () {
+        renderAtTime(getCurrentTime());
+      });
+
+      audioPlayer.addEventListener("play", function () {
+        state.isPlaying = true;
+        startTicker();
+      });
+
+      audioPlayer.addEventListener("pause", function () {
+        state.isPlaying = false;
+        stopTicker();
+        renderAtTime(getCurrentTime());
+      });
+
+      audioPlayer.addEventListener("seeked", function () {
+        renderAtTime(getCurrentTime());
+      });
+
+      audioPlayer.addEventListener("ended", function () {
+        state.isPlaying = false;
+        stopTicker();
+        renderAtTime(getCurrentTime());
+      });
+
+      window.addEventListener("beforeunload", function () {
+        clearAudioSource();
+      });
+
+      updateSpeedLabel();
+      applyVolume();
+      showImportScreen();
+      setStatus("Ready. Import your TTML file to begin.", false);
+    }());
+  </script>
+</body>
+</html>
